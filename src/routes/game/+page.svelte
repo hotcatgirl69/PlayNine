@@ -2,6 +2,10 @@
   import "/src/app.css";
   import { onMount } from "svelte";
 
+  import { io } from "socket.io-client";
+  import { goto } from "$app/navigation";
+  const socket = io("https://your-railway-backend.up.railway.app");
+
   let playerName: string,
     lobbyName: string,
     numPlayers: number,
@@ -22,6 +26,16 @@
     } else {
       lobbyInfo = `Room: ${lobbyName} | Passcode: ${lobbyPasscode}`;
     }
+  });
+
+  socket.on("lobby_joined", (lobbyData) => {
+    console.log("Joined lobby:", lobbyData);
+    // maybe update the UI or start the game
+  });
+
+  socket.on("lobby_error", (msg) => {
+    alert("Error: " + msg);
+    goto("/");
   });
 
   let scoreboard = Array(9)
