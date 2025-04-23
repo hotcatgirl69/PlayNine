@@ -9,7 +9,7 @@
 
   let socket: Socket;
   onMount(() => {
-    socket = io("https://playninegame.onrender.com");
+    socket = io("https://playninegame.onrender.com"); // Replace with your server URL
     socket.on("connect", () => {
       console.log("Connected to the server");
     });
@@ -17,7 +17,17 @@
     socket.on("disconnect", () => {
       console.log("Disconnected from server");
     });
+
+    // Listen for events (e.g., player joining, player leaving)
+    socket.on("player-joined", (data) => {
+      console.log(`${data.name} joined the lobby.`);
+    });
+
+    socket.on("player-left", (socketId) => {
+      console.log(`Player with socket ID ${socketId} left the lobby.`);
+    });
   });
+
   onDestroy(() => {
     if (socket) {
       socket.disconnect();
@@ -26,7 +36,36 @@
 
   // ----------- Page Data ------------
 
-  let showCreateModal = false;
+  let playerName = "";
+  onMount(() => {
+    const storedName = localStorage.getItem("playerName");
+    if (storedName) {
+      playerName = storedName;
+    }
+  });
+
+  let lobbyCode = "";
+
+  let createLobby = () => {
+    if (!playerName.trim()) {
+      alert("Please enter your name before creating a lobby.");
+      return;
+    }
+
+    localStorage.setItem("playerName", playerName);
+    handleCreateLobby();
+  };
+
+  let joinLobby = () => {
+    if (!playerName.trim()) {
+      alert("Please enter your name before joining a lobby.");
+      return;
+    }
+
+    localStorage.setItem("playerName", playerName);
+    openJoinModal();
+  };
+
   let showJoinModal = false;
   let openJoinModal = () => {
     showJoinModal = true;
@@ -35,53 +74,47 @@
     showJoinModal = false;
   };
 
-  let openCreateModal = () => {
-    showCreateModal = true;
-  };
-  let closeCreateModal = () => {
-    showCreateModal = false;
-  };
+  async function handleCreateLobby() {
+    const res = await fetch(
+      "https://playninegame.onrender.com/api/game/create",
+      {
+        // Replace with your server URL
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerName }),
+      }
+    );
 
-  let playerName = "";
-  let lobbyName = "";
-  let numPlayers = 2;
-  let lobbyVisibility = "public";
-  let lobbyPasscode = "";
-
-  function handleCreateLobby() {
-    console.log("Creating lobby with:", {
-      playerName,
-      lobbyName,
-      numPlayers,
-      lobbyVisibility,
-      lobbyPasscode,
-    });
-
-    sessionStorage.setItem("playerName", playerName);
-    sessionStorage.setItem("lobbyName", lobbyName);
-    sessionStorage.setItem("numPlayers", numPlayers.toString());
-    sessionStorage.setItem("lobbyVisibility", lobbyVisibility);
-    sessionStorage.setItem("lobbyPasscode", lobbyPasscode);
-
-    goto("/game");
+    const data = await res.json();
+    if (data.code) {
+      // Emit join-lobby event for the player after creating the lobby
+      socket.emit("join-lobby", { code: data.code, name: playerName });
+      goto(`/game/${data.code}`);
+    } else {
+      alert("Could not create lobby.");
+    }
   }
 
-  function handleJoinLobby() {
-    console.log("Creating lobby with:", {
-      playerName,
-      lobbyName,
-      numPlayers,
-      lobbyVisibility,
-      lobbyPasscode,
+  async function handleJoinLobby() {
+    const res = await fetch("https://playninegame.onrender.com/api/game/join", {
+      // Replace with your server URL
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: lobbyCode }),
     });
 
-    sessionStorage.setItem("playerName", playerName);
-    sessionStorage.setItem("lobbyName", lobbyName);
-    sessionStorage.setItem("numPlayers", numPlayers.toString());
-    sessionStorage.setItem("lobbyVisibility", lobbyVisibility);
-    sessionStorage.setItem("lobbyPasscode", lobbyPasscode);
+    const data = await res.json();
+    if (data.success) {
+      // Emit join-lobby event for the player after successful lobby join
+      socket.emit("join-lobby", {
+        code: lobbyCode,
+        name: playerName,
+      });
 
-    goto("/game");
+      goto(`/game/${lobbyCode}`);
+    } else {
+      alert("Lobby not found.");
+    }
   }
 </script>
 
@@ -99,98 +132,24 @@
   </div>
 
   <div class="buttons">
-    <button on:click={openCreateModal} aria-label="Create a new lobby"
+    <button on:click={createLobby} aria-label="Create a new lobby"
       >Create Lobby</button
     >
-    <button on:click={openJoinModal} aria-label="Join an existing lobby"
+    <button on:click={joinLobby} aria-label="Join an existing lobby"
       >Join Lobby</button
     >
   </div>
 </div>
 
-<!-- Modal for creating a lobby -->
-<Modal title="Create a Lobby" show={showCreateModal} onClose={closeCreateModal}>
-  <div class="form-row">
-    <label for="lobbyName">Lobby Name</label>
-    <input
-      id="lobbyName"
-      type="text"
-      placeholder="My Lobby Name"
-      bind:value={lobbyName}
-    />
-  </div>
-
-  <div class="form-row">
-    <label for="numPlayers">Num Players</label>
-    <input
-      id="numPlayers"
-      type="number"
-      placeholder="2"
-      min="2"
-      max="8"
-      bind:value={numPlayers}
-    />
-  </div>
-
-  <div class="form-row">
-    <div class="radio-options">
-      <div class="radio-pair">
-        <label for="visibility-public">Public</label>
-        <input
-          type="radio"
-          id="visibility-public"
-          name="visibility"
-          value="public"
-          bind:group={lobbyVisibility}
-        />
-      </div>
-      <div class="radio-pair">
-        <label for="visibility-private">Private</label>
-        <input
-          type="radio"
-          id="visibility-private"
-          name="visibility"
-          value="private"
-          bind:group={lobbyVisibility}
-        />
-      </div>
-    </div>
-  </div>
-
-  {#if lobbyVisibility === "private"}
-    <div class="form-row">
-      <label for="lobbyPasscode">Lobby Passcode</label>
-      <input
-        id="lobbyPasscode"
-        type="text"
-        placeholder="My Lobby Passcode"
-        bind:value={lobbyPasscode}
-      />
-    </div>
-  {/if}
-
-  <button class="submit" on:click={handleCreateLobby}>Create</button>
-</Modal>
-
-<!-- Modal for joining a lobby -->
 <Modal title="Join a Lobby" show={showJoinModal} onClose={closeJoinModal}>
-  <div class="form-row">
-    <label for="lobbyName">Lobby Name</label>
-    <input
-      id="lobbyName"
-      type="text"
-      placeholder="Lobby Name"
-      bind:value={lobbyName}
-    />
-  </div>
-
   <div class="form-row">
     <label for="lobbyCode">Lobby Code</label>
     <input
       id="lobbyCode"
       type="text"
-      placeholder="Lobby Code"
-      bind:value={lobbyPasscode}
+      placeholder="123456"
+      maxlength="6"
+      bind:value={lobbyCode}
     />
   </div>
 
@@ -271,38 +230,13 @@
     text-align: left;
   }
 
-  input[type="text"],
-  input[type="number"] {
+  input {
     flex: 1;
     min-width: 0;
     padding: 0.5rem;
     border-radius: 4px;
     border: 1px solid #ccc;
     box-sizing: border-box;
-  }
-
-  /* input[type="radio"] {
-    TODO: style radio buttons
-  } */
-
-  .radio-options {
-    display: flex;
-    gap: 2rem;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-  }
-
-  .radio-pair {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .radio-options label {
-    width: auto;
-    font-weight: normal;
   }
 
   footer {
