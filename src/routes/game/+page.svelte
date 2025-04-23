@@ -25,16 +25,6 @@
     }
   });
 
-  socket.on("lobby_joined", (lobbyData) => {
-    console.log("Joined lobby:", lobbyData);
-    // maybe update the UI or start the game
-  });
-
-  socket.on("lobby_error", (msg) => {
-    alert("Error: " + msg);
-    goto("/");
-  });
-
   let scoreboard = Array(9)
     .fill(0)
     .map((_, i) => ({
