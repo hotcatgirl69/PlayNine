@@ -1,10 +1,30 @@
-<script>
+<script lang="ts">
   import "/src/app.css";
   import Modal from "$components/Modal.svelte";
   import { goto } from "$app/navigation";
+  import { onMount, onDestroy } from "svelte";
+  import io, { Socket } from "socket.io-client";
 
-  import { io } from "socket.io-client";
-  const socket = io("https://your-railway-backend.up.railway.app");
+  // ----------- Server ------------
+
+  let socket: Socket;
+  onMount(() => {
+    socket = io("https://your-railway-app-url");
+    socket.on("connect", () => {
+      console.log("Connected to the server");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from server");
+    });
+  });
+  onDestroy(() => {
+    if (socket) {
+      socket.disconnect();
+    }
+  });
+
+  // ----------- Page Data ------------
 
   let showCreateModal = false;
   let showJoinModal = false;

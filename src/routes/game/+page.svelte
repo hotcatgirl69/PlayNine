@@ -3,9 +3,6 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
 
-  import { io } from "socket.io-client";
-  const socket = io("https://your-railway-backend.up.railway.app");
-
   let playerName: string,
     lobbyName: string,
     numPlayers: number,
