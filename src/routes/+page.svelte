@@ -3,6 +3,9 @@
   import Modal from "$components/Modal.svelte";
   import { goto } from "$app/navigation";
 
+  import { io } from "socket.io-client";
+  const socket = io("https://your-railway-backend.up.railway.app");
+
   let showCreateModal = false;
   let showJoinModal = false;
   let openJoinModal = () => {

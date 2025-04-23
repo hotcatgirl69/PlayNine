@@ -1,9 +1,9 @@
 <script lang="ts">
   import "/src/app.css";
   import { onMount } from "svelte";
+  import { goto } from "$app/navigation";
 
   import { io } from "socket.io-client";
-  import { goto } from "$app/navigation";
   const socket = io("https://your-railway-backend.up.railway.app");
 
   let playerName: string,
