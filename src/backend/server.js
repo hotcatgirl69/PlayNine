@@ -2,10 +2,19 @@ import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import db from "./db.js";
+import cors from "cors";
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+
+const corsOptions = {
+  origin: "https://playninegame.onrender.com",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
