@@ -9,7 +9,7 @@
 
   let socket: Socket;
   onMount(() => {
-    socket = io("https://your-railway-app-url");
+    socket = io("https://playninegame.onrender.com");
     socket.on("connect", () => {
       console.log("Connected to the server");
     });
